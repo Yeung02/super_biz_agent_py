@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AegisOps Agent</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 56'%3E%3Cpath fill='%23ff8a12' d='M24 2L44 11V28C44 40.2 35.8 50.8 24 54C12.2 50.8 4 40.2 4 28V11L24 2Z'/%3E%3Cpath fill='white' d='M30.8 19.4L23.1 27.1L19.2 23.3L15.9 26.6L23.1 33.8L34.1 22.7L30.8 19.4Z'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="/static/styles.css?v=aegisops-agent-history-db">
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/es/highlight.min.js"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="brand-lockup">
+                    <div class="brand-mark" aria-hidden="true">
+                        <svg viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M24 2L44 11V28C44 40.2 35.8 50.8 24 54C12.2 50.8 4 40.2 4 28V11L24 2Z" fill="currentColor"/>
+                            <path d="M30.8 19.4L23.1 27.1L19.2 23.3L15.9 26.6L23.1 33.8L34.1 22.7L30.8 19.4Z" fill="white"/>
+                            <path d="M24 13.2C28.4 13.2 32.3 15.6 34.4 19.1L31 21.2C29.6 18.8 27 17.2 24 17.2C19.5 17.2 15.8 20.9 15.8 25.4C15.8 29.9 19.5 33.6 24 33.6C27.2 33.6 30 31.7 31.3 29L34.9 30.8C33 34.9 28.8 37.6 24 37.6C17.3 37.6 11.8 32.1 11.8 25.4C11.8 18.7 17.3 13.2 24 13.2Z" fill="white" opacity="0.42"/>
+                        </svg>
+                    </div>
+                    <h1 class="sidebar-title">AegisOps Agent</h1>
+                </div>
+                <button class="sidebar-collapse-btn" type="button" title="收起侧边栏" aria-label="收起侧边栏">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M15 6L9 12L15 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M20 6L14 12L20 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="sidebar-content">
+                <button class="new-chat-btn" id="newChatBtn">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                    <span>新建对话</span>
+                </button>
+
+                <div class="chat-history-section">
+                    <div class="history-header">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 8V12L14.5 14.5M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>近期对话</span>
+                    </div>
+                    <div class="chat-history-list" id="chatHistoryList"></div>
+                    <button class="view-all-history-btn" id="viewAllHistoryBtn" type="button">
+                        <span>查看全部对话</span>
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="sidebar-spacer"></div>
+
+                <div class="ops-card">
+                    <div>
+                        <h2>AegisOps 助力运维</h2>
+                        <p>智能洞察 · 高效响应 · 稳定可靠</p>
+                        <button id="opsLearnMoreBtn" type="button">了解更多
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M5 12H19M13 6L19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="ops-card-art" aria-hidden="true">
+                        <svg viewBox="0 0 104 104" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M71 14L92 24V43C92 56 83.5 67.3 71 71C58.5 67.3 50 56 50 43V24L71 14Z" fill="#FF9F1A" opacity="0.28"/>
+                            <rect x="18" y="38" width="52" height="40" rx="8" fill="white" stroke="#FFD49C" stroke-width="3"/>
+                            <rect x="27" y="49" width="34" height="21" rx="4" fill="#FFF2DF"/>
+                            <path d="M31 65L39 57L46 63L54 53" stroke="#FF8A12" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M71 25L84 31V43C84 51 78.8 58.2 71 60.7C63.2 58.2 58 51 58 43V31L71 25Z" fill="#FF9F1A"/>
+                            <path d="M65 43L69.5 47.5L78 37.5" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <nav class="sidebar-footer" aria-label="辅助导航">
+                    <button id="settingsBtn" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 15.5A3.5 3.5 0 1 0 12 8.5A3.5 3.5 0 0 0 12 15.5Z" stroke="currentColor" stroke-width="2"/>
+                            <path d="M19.4 15A1.7 1.7 0 0 0 19.7 16.9L19.8 17A2 2 0 0 1 17 19.8L16.9 19.7A1.7 1.7 0 0 0 15 19.4A1.7 1.7 0 0 0 14 21V21.2A2 2 0 0 1 10 21.2V21A1.7 1.7 0 0 0 9 19.4A1.7 1.7 0 0 0 7.1 19.7L7 19.8A2 2 0 0 1 4.2 17L4.3 16.9A1.7 1.7 0 0 0 4.6 15A1.7 1.7 0 0 0 3 14H2.8A2 2 0 0 1 2.8 10H3A1.7 1.7 0 0 0 4.6 9A1.7 1.7 0 0 0 4.3 7.1L4.2 7A2 2 0 0 1 7 4.2L7.1 4.3A1.7 1.7 0 0 0 9 4.6A1.7 1.7 0 0 0 10 3V2.8A2 2 0 0 1 14 2.8V3A1.7 1.7 0 0 0 15 4.6A1.7 1.7 0 0 0 16.9 4.3L17 4.2A2 2 0 0 1 19.8 7L19.7 7.1A1.7 1.7 0 0 0 19.4 9A1.7 1.7 0 0 0 21 10H21.2A2 2 0 0 1 21.2 14H21A1.7 1.7 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>设置</span>
+                        <svg class="row-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <button id="helpBtn" type="button">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9.1 9A3 3 0 1 1 12 13V15M12 19H12.01M21 12A9 9 0 1 1 3 12A9 9 0 0 1 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span>帮助与反馈</span>
+                        <svg class="row-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <button class="ai-ops-top-btn" id="aiOpsSidebarBtn">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>AI Ops</span>
+            </button>
+
+            <div class="chat-container">
+                <section class="welcome-greeting" id="welcomeGreeting" aria-label="欢迎">
+                    <div class="welcome-visual" aria-hidden="true">
+                        <div class="spark spark-one"></div>
+                        <div class="spark spark-two"></div>
+                        <div class="cloud cloud-left"></div>
+                        <div class="cloud cloud-right"></div>
+                        <svg class="hero-illustration" viewBox="0 0 620 248" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="316" cy="118" r="96" fill="#FFF1DD"/>
+                            <rect x="372" y="68" width="246" height="142" rx="16" fill="#FFF8EF" stroke="#FFC173" stroke-width="4"/>
+                            <rect x="388" y="88" width="58" height="112" rx="8" fill="#FFE1AE"/>
+                            <rect x="462" y="104" width="92" height="72" rx="8" fill="white"/>
+                            <rect x="568" y="104" width="34" height="12" rx="6" fill="#FFE0AA"/>
+                            <rect x="568" y="128" width="26" height="12" rx="6" fill="#FFECD1"/>
+                            <rect x="568" y="152" width="40" height="12" rx="6" fill="#FFECD1"/>
+                            <path d="M478 156V136M496 156V122M514 156V144M532 156V115" stroke="#FFC160" stroke-width="12" stroke-linecap="round"/>
+                            <rect x="392" y="116" width="40" height="8" rx="4" fill="#FFF8EF"/>
+                            <rect x="392" y="144" width="54" height="8" rx="4" fill="#FFC160"/>
+                            <rect x="392" y="164" width="35" height="8" rx="4" fill="#FFDFA9"/>
+                            <path d="M590 55C594.2 55 596.8 55 601 55" stroke="#FFD38E" stroke-width="5" stroke-linecap="round"/>
+                            <path d="M574 55C578.2 55 580.8 55 585 55" stroke="#FFD38E" stroke-width="5" stroke-linecap="round"/>
+                            <circle cx="392" cy="84" r="6" fill="#FFA62B"/>
+                            <circle cx="410" cy="84" r="6" fill="#FFC66D"/>
+                            <circle cx="428" cy="84" r="6" fill="#FFE6BA"/>
+                            <path d="M236 66C255.9 66 272 82.1 272 102V162H200V102C200 82.1 216.1 66 236 66Z" fill="#FFF9F2"/>
+                            <path d="M188 172C194 137 210 122 236 122C262 122 278 137 284 172" fill="#FFF4E5"/>
+                            <rect x="178" y="46" width="116" height="96" rx="48" fill="#FFF9F2" stroke="#FFCD8F" stroke-width="3"/>
+                            <rect x="195" y="61" width="82" height="62" rx="31" fill="#2C2233"/>
+                            <path d="M218 91C218 83 230 83 230 91" stroke="#FF9A19" stroke-width="5" stroke-linecap="round"/>
+                            <path d="M248 91C248 83 260 83 260 91" stroke="#FF9A19" stroke-width="5" stroke-linecap="round"/>
+                            <path d="M224 105C231 114 242 114 249 105" stroke="#FF9A19" stroke-width="5" stroke-linecap="round"/>
+                            <rect x="165" y="82" width="16" height="36" rx="8" fill="#FF9A19"/>
+                            <rect x="291" y="82" width="16" height="36" rx="8" fill="#FF9A19"/>
+                            <path d="M236 45V26" stroke="#FF9A19" stroke-width="5" stroke-linecap="round"/>
+                            <circle cx="236" cy="23" r="8" fill="#FF9A19"/>
+                            <path d="M298 126C313 133 325 147 329 165" stroke="#FFF1DD" stroke-width="18" stroke-linecap="round"/>
+                            <path d="M328 157C337 151 347 156 348 167" stroke="#4A2F18" stroke-width="10" stroke-linecap="round"/>
+                            <path d="M534 152L589 176V202C589 218 577.5 232.4 562 237C546.5 232.4 535 218 535 202V152Z" fill="#FF9F1A" opacity="0.88"/>
+                            <path d="M548 195L560 207L580 181" stroke="white" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M60 142C64 117 81 101 106 101C126 101 142 113 148 131C169 133 183 149 184 169H42C43 157 49 148 60 142Z" fill="#FFF1DD"/>
+                            <path d="M28 68L36 84L52 92L36 100L28 116L20 100L4 92L20 84L28 68Z" fill="#FFC160"/>
+                            <circle cx="332" cy="24" r="9" fill="#FFF2DF"/>
+                            <circle cx="600" cy="22" r="10" fill="#FFF2DF"/>
+                            <path d="M114 38L118 46L126 50L118 54L114 62L110 54L102 50L110 46L114 38Z" fill="#FFC160"/>
+                        </svg>
+                    </div>
+                    <h2>你好！我是 <span>AegisOps Agent</span></h2>
+                    <p>我可以帮你解答运维问题、分析数据、生成报告、编写脚本等<br>有问题尽管问我吧！</p>
+                </section>
+
+                <div class="chat-messages" id="chatMessages"></div>
+
+                <div class="chat-input-container">
+                    <div class="input-group-wrapper">
+                        <div class="input-wrapper">
+                            <div class="input-main-row">
+                                <div class="input-leading-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 2L14.2 8.1L20.5 10.3L14.2 12.5L12 18.6L9.8 12.5L3.5 10.3L9.8 8.1L12 2Z" fill="currentColor"/>
+                                        <path d="M18.5 16L19.7 19.3L23 20.5L19.7 21.7L18.5 25L17.3 21.7L14 20.5L17.3 19.3L18.5 16Z" fill="currentColor"/>
+                                    </svg>
+                                </div>
+                                <input type="text" id="messageInput" placeholder="问问 AegisOps Agent..." maxlength="1000" class="message-input">
+                            </div>
+                            <div class="input-bottom-bar">
+                                <div class="tools-btn-wrapper">
+                                    <button class="prompt-chip" type="button" data-prompt="分析系统性能瓶颈">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M4 19H20M6 16L10 12L13 15L19 8M19 8H14M19 8V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span>分析系统性能瓶颈</span>
+                                    </button>
+                                    <button class="prompt-chip" type="button" data-prompt="查询错误日志">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M8 7H20M8 12H20M8 17H20M4 7H4.01M4 12H4.01M4 17H4.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span>查询错误日志</span>
+                                    </button>
+                                    <button class="prompt-chip" type="button" data-prompt="生成巡检报告">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M14 2H6A2 2 0 0 0 4 4V20A2 2 0 0 0 6 22H18A2 2 0 0 0 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            <path d="M14 2V8H20M8 13H16M8 17H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span>生成巡检报告</span>
+                                    </button>
+                                    <button class="prompt-chip" type="button" data-prompt="推荐优化方案">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M9 18H15M10 22H14M12 2A7 7 0 0 0 8 14.7V16H16V14.7A7 7 0 0 0 12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                        <span>推荐优化方案</span>
+                                    </button>
+                                </div>
+                                <div class="right-actions">
+                                    <div class="mode-selector-wrapper">
+                                        <button class="mode-selector-btn" id="modeSelectorBtn">
+                                            <span id="currentModeText">快速</span>
+                                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                        </button>
+                                        <div class="mode-dropdown" id="modeDropdown">
+                                            <div class="dropdown-header">选择对话方式</div>
+                                            <div class="dropdown-item active" data-mode="quick">
+                                                <div class="dropdown-item-main">
+                                                    <span>快速</span>
+                                                    <span class="badge-new">新</span>
+                                                </div>
+                                                <div class="dropdown-item-sub">快速对话</div>
+                                            </div>
+                                            <div class="dropdown-item" data-mode="stream">
+                                                <div class="dropdown-item-main">
+                                                    <span>流式</span>
+                                                </div>
+                                                <div class="dropdown-item-sub">流式对话</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button class="tools-btn" id="toolsBtn" title="上传文件" aria-label="上传文件">
+                                        <svg class="tools-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M21.4 11.1L12.2 20.2A6 6 0 0 1 3.8 11.8L13 2.6A4 4 0 0 1 18.6 8.2L9.4 17.4A2 2 0 0 1 6.6 14.6L15.1 6.1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                    <div class="tools-menu" id="toolsMenu">
+                                        <div class="tools-menu-item" id="uploadFileItem">
+                                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M21.4 11.1L12.2 20.2A6 6 0 0 1 3.8 11.8L13 2.6A4 4 0 0 1 18.6 8.2L9.4 17.4A2 2 0 0 1 6.6 14.6L15.1 6.1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                            <span>上传文件</span>
+                                        </div>
+                                    </div>
+                                    <button class="send-btn-circle" id="sendButton" title="发送" aria-label="发送">
+                                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".txt,.md,.markdown" style="display: none;">
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="operations-panel-backdrop" id="operationsPanel" aria-hidden="true">
+        <section class="operations-panel" role="dialog" aria-modal="true" aria-labelledby="operationsPanelTitle">
+            <header class="operations-panel-header">
+                <div>
+                    <p>联动后端能力</p>
+                    <h2 id="operationsPanelTitle">AegisOps 控制台</h2>
+                </div>
+                <button class="panel-close-btn" id="closeOperationsPanelBtn" type="button" aria-label="关闭">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </header>
+
+            <div class="operations-grid">
+                <button class="operation-action" id="healthCheckBtn" type="button">
+                    <span class="operation-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20.5 8.5L12 3L3.5 8.5V15.5L12 21L20.5 15.5V8.5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M8 12L11 15L16.5 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <strong>服务健康检查</strong>
+                    <span>调用 /api/health 查看 FastAPI 与 Milvus 状态</span>
+                </button>
+                <button class="operation-action" id="uploadFromPanelBtn" type="button">
+                    <span class="operation-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 16V4M7 9L12 4L17 9M5 20H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <strong>上传知识文档</strong>
+                    <span>调用 /api/upload 上传 txt/md 并创建向量索引</span>
+                </button>
+                <button class="operation-action" id="triggerAIOpsPanelBtn" type="button">
+                    <span class="operation-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M2 17L12 22L22 17M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <strong>AIOps 智能诊断</strong>
+                    <span>调用 /api/aiops 流式生成诊断过程和报告</span>
+                </button>
+                <button class="operation-action" id="clearSessionBtn" type="button">
+                    <span class="operation-icon">
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 6H21M8 6V4H16V6M6 6L7 21H17L18 6M10 11V16M14 11V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                    <strong>清空当前会话</strong>
+                    <span>调用 /api/chat/clear 清理后端会话上下文</span>
+                </button>
+            </div>
+
+            <div class="directory-index-tool">
+                <label for="indexDirectoryInput">目录索引</label>
+                <div>
+                    <input id="indexDirectoryInput" type="text" value="aiops-docs" placeholder="输入 allowlist 内目录，例如 aiops-docs">
+                    <button id="indexDirectoryBtn" type="button">索引目录</button>
+                </div>
+            </div>
+
+            <div class="history-panel" id="historyPanel">
+                <div class="history-panel-header">
+                    <h3>全部对话</h3>
+                    <span id="historyPanelCount">0 条</span>
+                </div>
+                <div class="history-panel-list" id="historyPanelList"></div>
+            </div>
+
+            <pre class="operations-output" id="operationsOutput">选择一个能力即可调用后端接口。</pre>
+        </section>
+    </div>
+
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">智能运维分析中，请稍候...</div>
+            <div class="loading-subtext">后端正在处理，请耐心等待</div>
+        </div>
+    </div>
+
+    <script src="/static/app.js?v=aegisops-agent-history-db"></script>
+</body>
+</html>
