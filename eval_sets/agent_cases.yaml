@@ -1,0 +1,1647 @@
+# Agent 轨迹评测集（100 cases，离线评估数据，不被线上 FastAPI 默认导入）。
+#
+# 与 rag_cases.yaml 的区别：这里评的是 Plan-Execute-Replan 的"轨迹质量"——
+# - required_tools / forbidden_tools 校验工具选择是否正确；
+# - max_steps_budget 校验执行效率（步数是否超预算）；
+# - expected_keywords 校验最终答案是否达成任务目标；
+# - should_complete=false 的用例评估拒答行为（不编造、不乱调工具）。
+#
+# 工具名与线上保持一致：本地 get_current_time / retrieve_knowledge，
+# MCP query_cpu_metrics / query_memory_metrics / get_current_timestamp /
+# get_region_code_by_name / get_topic_info_by_name /
+# search_topic_by_service_name / search_log。
+#
+# 构成：38 diagnose / 40 tool_query / 22 out_of_scope。
+# ============================================================
+# diagnose：指标诊断 + 知识库诊断 + 日志诊断
+# ============================================================
+- id: cpu_diagnosis_001
+  task: "查询当前 CPU 使用率指标，如果超过 80%，检索相关日志并给出高 CPU 的排查结论。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 5
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "diagnosis"
+  difficulty: easy
+  golden_answer: "应调用 query_cpu_metrics 获取 CPU 使用率，结合阈值判断并给出排查结论。"
+
+- id: cpu_diagnosis_002
+  task: "CPU 使用率持续超过 80%，请结合系统指标和日志定位根因，输出诊断报告。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+    - "使用率"
+  max_steps_budget: 6
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "diagnosis"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应先查 CPU 指标确认告警，再按服务检索日志，最后基于证据输出根因结论。"
+
+- id: cpu_diagnosis_003
+  task: "查看当前 CPU 指标并判断是否存在告警风险。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 query_cpu_metrics 获取 CPU 使用率并判断是否达到告警阈值。"
+
+- id: cpu_diagnosis_004
+  task: "当前服务器 CPU 使用率是多少？是否超过 80% 告警阈值？"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "threshold"
+  difficulty: easy
+  golden_answer: "应调用 query_cpu_metrics 获取 CPU 使用率，与 80% 阈值对比并给出结论。"
+
+- id: cpu_diagnosis_005
+  task: "查询 CPU 指标，如果偏高就结合知识库给出 HighCPUUsage 的处理建议。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 6
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "knowledge"
+  difficulty: medium
+  golden_answer: "应先查 CPU 指标判断是否偏高，再检索知识库中 HighCPUUsage 处理方案并总结建议。"
+
+- id: cpu_diagnosis_006
+  task: "评估当前系统 CPU 健康状况，输出结论。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "health-check"
+  difficulty: easy
+  golden_answer: "应调用 query_cpu_metrics 获取指标并给出 CPU 健康状况结论。"
+
+- id: cpu_diagnosis_007
+  task: "CPU 是否存在异常？如异常请检索日志辅助定位。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 6
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应先查 CPU 指标判断异常，再检索日志辅助定位根因。"
+
+- id: cpu_diagnosis_008
+  task: "CPU 使用率现在多少？给出具体数值和结论。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 query_cpu_metrics 获取具体数值并给出结论。"
+
+- id: memory_diagnosis_001
+  task: "查询内存使用率指标，判断是否存在内存告警，并说明下一步排查方向。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+  forbidden_tools:
+    - "query_cpu_metrics"
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 5
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "diagnosis"
+  difficulty: easy
+  golden_answer: "应调用 query_memory_metrics 获取内存指标并判断告警状态。"
+
+- id: memory_diagnosis_002
+  task: "查看当前内存使用率并判断是否达到 85% 告警阈值。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "threshold"
+  difficulty: easy
+  golden_answer: "应调用 query_memory_metrics 获取内存使用率，与 85% 阈值对比并给出结论。"
+
+- id: memory_diagnosis_003
+  task: "内存指标正常吗？给出分析结论。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 query_memory_metrics 获取指标并给出内存状态分析结论。"
+
+- id: memory_diagnosis_004
+  task: "查询内存指标，若超过阈值则检索知识库处理方案。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 6
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "knowledge"
+  difficulty: medium
+  golden_answer: "应先查内存指标判断是否超阈值，再检索知识库中 HighMemoryUsage 处理方案。"
+
+- id: memory_diagnosis_005
+  task: "检查内存使用情况，必要时搜索相关错误日志。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 6
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应先查内存指标，如异常则搜索错误日志辅助定位。"
+
+- id: memory_diagnosis_006
+  task: "当前系统是否存在 HighMemoryUsage 风险？"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+  forbidden_tools:
+    - "query_cpu_metrics"
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "risk"
+  difficulty: easy
+  golden_answer: "应调用 query_memory_metrics 判断是否存在 HighMemoryUsage 风险，不应调用 CPU 工具。"
+
+- id: memory_diagnosis_007
+  task: "评估内存与 CPU 是否有告警，输出简报。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+    - "CPU"
+  max_steps_budget: 7
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "cpu"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应分别查询 CPU 与内存指标，对比阈值并输出告警简报。"
+
+- id: memory_diagnosis_008
+  task: "内存使用率现在多少？给出具体数值和结论。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 query_memory_metrics 获取具体数值并给出结论。"
+
+- id: full_diagnosis_001
+  task: "诊断当前系统是否存在告警：查询 CPU 与内存指标，必要时检索日志，输出 Markdown 诊断报告。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "告警"
+  max_steps_budget: 8
+  case_type: diagnose
+  tags:
+    - "diagnosis"
+    - "multi-tool"
+  difficulty: hard
+  golden_answer: "应分别查询 CPU 和内存指标，结合日志证据输出告警分析报告。"
+
+- id: system_diagnosis_002
+  task: "全面体检：查询 CPU 和内存指标，判断是否存在任何告警。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "告警"
+  max_steps_budget: 7
+  case_type: diagnose
+  tags:
+    - "diagnosis"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应分别查询 CPU 和内存指标，判断是否存在告警并输出结论。"
+
+- id: system_diagnosis_003
+  task: "生成当前系统资源诊断结论：CPU、内存分别评估。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+    - "内存"
+  max_steps_budget: 7
+  case_type: diagnose
+  tags:
+    - "diagnosis"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应分别查询 CPU 和内存指标，给出各自评估结论。"
+
+- id: system_diagnosis_004
+  task: "查询系统指标并检索最近错误日志，输出综合诊断报告。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "诊断"
+  max_steps_budget: 8
+  case_type: diagnose
+  tags:
+    - "diagnosis"
+    - "log-query"
+  difficulty: hard
+  golden_answer: "应查询 CPU 指标并检索错误日志，综合输出诊断报告。"
+
+- id: system_diagnosis_005
+  task: "系统当前健康状态如何？请基于指标和日志给出判断。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "健康"
+  max_steps_budget: 8
+  case_type: diagnose
+  tags:
+    - "diagnosis"
+    - "health-check"
+    - "multi-tool"
+  difficulty: hard
+  golden_answer: "应查询 CPU 和内存指标并检索日志，基于证据给出健康状态判断。"
+
+- id: system_diagnosis_006
+  task: "检查 CPU 指标，若异常再查日志并给出处置建议。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 6
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "conditional"
+  difficulty: medium
+  golden_answer: "应先查 CPU 指标，若异常再检索日志并给出处置建议。"
+
+- id: system_diagnosis_007
+  task: "检查内存指标，若异常检索知识库建议并总结。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 6
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "conditional"
+    - "knowledge"
+  difficulty: medium
+  golden_answer: "应先查内存指标，若异常则检索知识库处理建议并总结。"
+
+- id: system_diagnosis_008
+  task: "对比 CPU 与内存使用率，判断哪个资源压力更大。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+    - "内存"
+  max_steps_budget: 7
+  case_type: diagnose
+  tags:
+    - "diagnosis"
+    - "comparison"
+  difficulty: medium
+  golden_answer: "应分别查询 CPU 和内存使用率，对比数值并判断哪个资源压力更大。"
+
+- id: knowledge_diagnosis_002
+  task: "根据知识库说明 HighCPUUsage 的触发条件。"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "HighCPUUsage"
+  max_steps_budget: 3
+  case_type: diagnose
+  tags:
+    - "knowledge"
+    - "alert-rule"
+  difficulty: easy
+  golden_answer: "应调用 retrieve_knowledge 检索 HighCPUUsage 触发条件并复述。"
+
+- id: knowledge_diagnosis_003
+  task: "从知识库查找 HighDiskUsage 的告警级别划分。"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "HighDiskUsage"
+  max_steps_budget: 3
+  case_type: diagnose
+  tags:
+    - "knowledge"
+    - "alert-rule"
+  difficulty: easy
+  golden_answer: "应调用 retrieve_knowledge 检索 HighDiskUsage 告警级别（80% 警告 / 90% 严重）。"
+
+- id: knowledge_diagnosis_004
+  task: "知识库中 ServiceUnavailable 的第一时间止损措施是什么？"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "ServiceUnavailable"
+  max_steps_budget: 3
+  case_type: diagnose
+  tags:
+    - "knowledge"
+    - "emergency"
+  difficulty: medium
+  golden_answer: "应调用 retrieve_knowledge 检索 ServiceUnavailable 止损措施（摘除故障实例/备用服务/维护页面）。"
+
+- id: knowledge_diagnosis_005
+  task: "检索知识库：SlowResponse 告警的触发条件是什么？"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "SlowResponse"
+  max_steps_budget: 3
+  case_type: diagnose
+  tags:
+    - "knowledge"
+    - "alert-rule"
+  difficulty: easy
+  golden_answer: "应调用 retrieve_knowledge 检索 SlowResponse 触发条件（P99 持续 5 分钟超 3 秒）。"
+
+- id: knowledge_diagnosis_006
+  task: "内存泄漏应如何处理？请基于知识库回答。"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存泄漏"
+  max_steps_budget: 3
+  case_type: diagnose
+  tags:
+    - "knowledge"
+    - "memory"
+  difficulty: medium
+  golden_answer: "应调用 retrieve_knowledge 检索内存泄漏处理方案（重启前堆转储、MAT 分析、修复发布）。"
+
+- id: knowledge_diagnosis_007
+  task: "知识库里磁盘满了的紧急处理步骤有哪些？"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "磁盘"
+  max_steps_budget: 3
+  case_type: diagnose
+  tags:
+    - "knowledge"
+    - "disk"
+  difficulty: easy
+  golden_answer: "应调用 retrieve_knowledge 检索磁盘告警紧急处理步骤（清理大文件/临时文件/紧急扩容）。"
+
+- id: knowledge_diagnosis_008
+  task: "从知识库检索服务不可用的常见原因。"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "服务"
+  max_steps_budget: 3
+  case_type: diagnose
+  tags:
+    - "knowledge"
+    - "root-cause"
+  difficulty: medium
+  golden_answer: "应调用 retrieve_knowledge 检索服务不可用常见原因（崩溃/数据库连接/依赖故障/配置/资源/网络）。"
+
+- id: log_diagnosis_002
+  task: "搜索最近的错误日志并总结主要问题。"
+  should_complete: true
+  required_tools:
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "log-query"
+    - "single-tool"
+  difficulty: medium
+  golden_answer: "应调用 search_log 检索错误日志并总结主要问题。"
+
+- id: log_diagnosis_003
+  task: "按服务 sync 检索 error 日志，判断是否存在异常。"
+  should_complete: true
+  required_tools:
+    - "search_topic_by_service_name"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 6
+  case_type: diagnose
+  tags:
+    - "log-query"
+    - "cls"
+  difficulty: medium
+  golden_answer: "应先按服务名定位日志主题，再检索 error 日志并判断异常。"
+
+- id: log_diagnosis_004
+  task: "在日志主题中检索最近 30 分钟的日志并汇报。"
+  should_complete: true
+  required_tools:
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "log-query"
+    - "single-tool"
+  difficulty: medium
+  golden_answer: "应调用 search_log 检索最近 30 分钟日志并汇报关键内容。"
+
+- id: log_diagnosis_005
+  task: "CPU 指标若异常，按服务名找到日志主题并检索 error 日志。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "search_topic_by_service_name"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 8
+  case_type: diagnose
+  tags:
+    - "cpu"
+    - "log-query"
+    - "multi-tool"
+  difficulty: hard
+  golden_answer: "应先查 CPU 指标，若异常则按服务名定位日志主题，再检索 error 日志。"
+
+- id: log_diagnosis_006
+  task: "内存异常时，结合日志给出根因分析。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 7
+  case_type: diagnose
+  tags:
+    - "memory"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应先查内存指标确认异常，再检索日志并给出根因分析。"
+
+- id: log_diagnosis_007
+  task: "检索日志中最近的告警事件并汇报。"
+  should_complete: true
+  required_tools:
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 4
+  case_type: diagnose
+  tags:
+    - "log-query"
+    - "single-tool"
+  difficulty: medium
+  golden_answer: "应调用 search_log 检索告警事件并汇报。"
+
+- id: log_diagnosis_008
+  task: "查询当前时间，然后检索最近 15 分钟的错误日志。"
+  should_complete: true
+  required_tools:
+    - "get_current_time"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 5
+  case_type: diagnose
+  tags:
+    - "log-query"
+    - "time"
+  difficulty: medium
+  golden_answer: "应先获取当前时间确定时间范围，再检索最近 15 分钟错误日志。"
+
+# ============================================================
+# tool_query：单工具查询与工具链组合
+# ============================================================
+- id: time_query_001
+  task: "现在几点了？请给出当前时间。"
+  should_complete: true
+  required_tools:
+    - "get_current_time"
+  forbidden_tools:
+    - "search_log"
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+  expected_keywords:
+    - "时间"
+  max_steps_budget: 2
+  case_type: tool_query
+  tags:
+    - "time"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 get_current_time 返回当前时间，不应触发任何监控或日志工具。"
+
+- id: time_query_002
+  task: "现在几点？"
+  should_complete: true
+  required_tools:
+    - "get_current_time"
+  forbidden_tools: []
+  expected_keywords:
+    - "时间"
+  max_steps_budget: 2
+  case_type: tool_query
+  tags:
+    - "time"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 get_current_time 返回当前时间。"
+
+- id: time_query_003
+  task: "告诉我当前时间，用于确定告警时间范围。"
+  should_complete: true
+  required_tools:
+    - "get_current_time"
+  forbidden_tools: []
+  expected_keywords:
+    - "时间"
+  max_steps_budget: 2
+  case_type: tool_query
+  tags:
+    - "time"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 get_current_time 返回当前时间。"
+
+- id: time_query_004
+  task: "当前日期和时间是多少？"
+  should_complete: true
+  required_tools:
+    - "get_current_time"
+  forbidden_tools: []
+  expected_keywords:
+    - "时间"
+  max_steps_budget: 2
+  case_type: tool_query
+  tags:
+    - "time"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 get_current_time 返回当前日期和时间。"
+
+- id: timestamp_query_001
+  task: "获取当前时间戳。"
+  should_complete: true
+  required_tools:
+    - "get_current_timestamp"
+  forbidden_tools:
+    - "search_log"
+  expected_keywords:
+    - "时间戳"
+  max_steps_budget: 2
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 get_current_timestamp 返回时间戳。"
+
+- id: timestamp_query_002
+  task: "获取当前 Unix 时间戳。"
+  should_complete: true
+  required_tools:
+    - "get_current_timestamp"
+  forbidden_tools: []
+  expected_keywords:
+    - "时间戳"
+  max_steps_budget: 2
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 get_current_timestamp 返回 Unix 时间戳。"
+
+- id: timestamp_query_003
+  task: "给我当前时间戳，用于日志查询参数。"
+  should_complete: true
+  required_tools:
+    - "get_current_timestamp"
+  forbidden_tools: []
+  expected_keywords:
+    - "时间戳"
+  max_steps_budget: 2
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "single-tool"
+  difficulty: easy
+  golden_answer: "应调用 get_current_timestamp 返回时间戳。"
+
+- id: region_query_002
+  task: "查一下华南地区对应的 region code。"
+  should_complete: true
+  required_tools:
+    - "get_region_code_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "region"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "region"
+  difficulty: easy
+  golden_answer: "应调用 get_region_code_by_name 查询华南地区 region code。"
+
+- id: region_query_003
+  task: "华东（杭州）的 region code 是什么？"
+  should_complete: true
+  required_tools:
+    - "get_region_code_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "region"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "region"
+  difficulty: easy
+  golden_answer: "应调用 get_region_code_by_name 查询华东（杭州）region code。"
+
+- id: region_query_004
+  task: "获取北京的 region code。"
+  should_complete: true
+  required_tools:
+    - "get_region_code_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "region"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "region"
+  difficulty: easy
+  golden_answer: "应调用 get_region_code_by_name 查询北京 region code。"
+
+- id: topic_query_002
+  task: "查询日志主题 system-metrics 的详细信息。"
+  should_complete: true
+  required_tools:
+    - "get_topic_info_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+  difficulty: easy
+  golden_answer: "应调用 get_topic_info_by_name 查询 system-metrics 主题详情。"
+
+- id: topic_query_003
+  task: "主题 application-logs 的详情是什么？"
+  should_complete: true
+  required_tools:
+    - "get_topic_info_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+  difficulty: easy
+  golden_answer: "应调用 get_topic_info_by_name 查询 application-logs 主题详情。"
+
+- id: topic_query_004
+  task: "获取 ops-log 主题信息。"
+  should_complete: true
+  required_tools:
+    - "get_topic_info_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+  difficulty: easy
+  golden_answer: "应调用 get_topic_info_by_name 查询 ops-log 主题信息。"
+
+- id: region_topic_001
+  task: "查询华东区域 cn-hangzhou 的 region code，然后用它查询主题 ops-log 的详细信息。"
+  should_complete: true
+  required_tools:
+    - "get_region_code_by_name"
+    - "get_topic_info_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 4
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+  difficulty: medium
+  golden_answer: "应先 get_region_code_by_name 拿 region code，再 get_topic_info_by_name 查主题信息。"
+
+- id: region_topic_002
+  task: "先查广州的 region code，再查该区域 system-metrics 主题详情。"
+  should_complete: true
+  required_tools:
+    - "get_region_code_by_name"
+    - "get_topic_info_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 5
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先查广州 region code，再查询 system-metrics 主题详情。"
+
+- id: region_topic_003
+  task: "获取上海 region code 后查询 application-logs 主题信息。"
+  should_complete: true
+  required_tools:
+    - "get_region_code_by_name"
+    - "get_topic_info_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 5
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先查上海 region code，再查询 application-logs 主题信息。"
+
+- id: region_topic_004
+  task: "查北京区域码，然后查 ops-log 主题详情。"
+  should_complete: true
+  required_tools:
+    - "get_region_code_by_name"
+    - "get_topic_info_by_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 5
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先查北京 region code，再查询 ops-log 主题详情。"
+
+- id: service_topic_002
+  task: "按服务名 sync 查找日志主题。"
+  should_complete: true
+  required_tools:
+    - "search_topic_by_service_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+  difficulty: medium
+  golden_answer: "应调用 search_topic_by_service_name 查找服务 sync 的日志主题。"
+
+- id: service_topic_003
+  task: "服务 api-gateway 对应的日志主题是什么？"
+  should_complete: true
+  required_tools:
+    - "search_topic_by_service_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+  difficulty: medium
+  golden_answer: "应调用 search_topic_by_service_name 查找 api-gateway 的日志主题。"
+
+- id: service_topic_004
+  task: "查找服务 user-center 的日志主题并给出主题 ID。"
+  should_complete: true
+  required_tools:
+    - "search_topic_by_service_name"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "topic"
+  difficulty: medium
+  golden_answer: "应调用 search_topic_by_service_name 查找 user-center 的日志主题和 ID。"
+
+- id: log_search_001
+  task: "先按服务名 sync 查找日志主题，再在主题中检索最近包含 error 的日志。"
+  should_complete: true
+  required_tools:
+    - "search_topic_by_service_name"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 6
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应先 search_topic_by_service_name 定位主题，再用 search_log 检索日志。"
+
+- id: log_search_002
+  task: "在日志中检索最近包含 ERROR 的记录。"
+  should_complete: true
+  required_tools:
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 4
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应调用 search_log 检索包含 ERROR 的日志记录。"
+
+- id: log_search_003
+  task: "搜索最近 15 分钟的 error 日志。"
+  should_complete: true
+  required_tools:
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 4
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应调用 search_log 检索最近 15 分钟的 error 日志。"
+
+- id: log_search_004
+  task: "检索服务 sync 的错误日志并统计数量。"
+  should_complete: true
+  required_tools:
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 4
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应调用 search_log 检索服务 sync 的错误日志并统计数量。"
+
+- id: log_search_005
+  task: "查找最近的 WARN 日志。"
+  should_complete: true
+  required_tools:
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 4
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应调用 search_log 检索最近的 WARN 日志。"
+
+- id: knowledge_query_001
+  task: "查询知识库：磁盘使用率超过 90% 且日志无法写入时，5 分钟内应如何释放空间？"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "磁盘"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "rag"
+  difficulty: easy
+  golden_answer: "应调用 retrieve_knowledge 检索 runbook 并基于检索结果给出释放空间步骤。"
+
+- id: knowledge_query_002
+  task: "查询知识库：内存告警的处理方案。"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "rag"
+  difficulty: easy
+  golden_answer: "应调用 retrieve_knowledge 检索内存告警处理方案并总结。"
+
+- id: knowledge_query_003
+  task: "从知识库查找 CPU 告警排查步骤。"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "rag"
+  difficulty: easy
+  golden_answer: "应调用 retrieve_knowledge 检索 CPU 告警排查步骤。"
+
+- id: knowledge_query_004
+  task: "知识库中如何处理数据库连接失败？"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "数据库"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "rag"
+  difficulty: medium
+  golden_answer: "应调用 retrieve_knowledge 检索数据库连接失败处理方案。"
+
+- id: knowledge_query_005
+  task: "查询磁盘告警的验证标准。"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "磁盘"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "rag"
+  difficulty: medium
+  golden_answer: "应调用 retrieve_knowledge 检索磁盘告警验证标准（降到 70% 以下等）。"
+
+- id: knowledge_query_006
+  task: "知识库里响应时间过长的优化措施？"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "响应"
+  max_steps_budget: 3
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "rag"
+  difficulty: medium
+  golden_answer: "应调用 retrieve_knowledge 检索响应时间过长的优化措施并总结。"
+
+- id: time_knowledge_002
+  task: "先获取当前时间，再查知识库 CPU 排查第一步做什么。"
+  should_complete: true
+  required_tools:
+    - "get_current_time"
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 5
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "time"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先调用 get_current_time 获取时间，再调用 retrieve_knowledge 查 CPU 排查步骤。"
+
+- id: time_knowledge_003
+  task: "获取当前时间后，检索知识库中磁盘清理命令。"
+  should_complete: true
+  required_tools:
+    - "get_current_time"
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "磁盘"
+  max_steps_budget: 5
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "time"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先获取当前时间，再检索知识库磁盘清理命令。"
+
+- id: chain_query_002
+  task: "获取当前时间戳，然后查 CPU 指标。"
+  should_complete: true
+  required_tools:
+    - "get_current_timestamp"
+    - "query_cpu_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 5
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "cpu"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先调用 get_current_timestamp，再调用 query_cpu_metrics 查 CPU 指标。"
+
+- id: chain_query_003
+  task: "查当前时间，再查内存指标。"
+  should_complete: true
+  required_tools:
+    - "get_current_time"
+    - "query_memory_metrics"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 5
+  case_type: tool_query
+  tags:
+    - "time"
+    - "memory"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先调用 get_current_time，再调用 query_memory_metrics 查内存指标。"
+
+- id: chain_query_004
+  task: "查 CPU 和内存指标，再获取当前时间。"
+  should_complete: true
+  required_tools:
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+    - "get_current_time"
+  forbidden_tools: []
+  expected_keywords:
+    - "CPU"
+  max_steps_budget: 6
+  case_type: tool_query
+  tags:
+    - "cpu"
+    - "memory"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应分别查询 CPU 与内存指标，再调用 get_current_time 获取当前时间。"
+
+- id: chain_query_005
+  task: "先查 sync 的日志主题，再检索该主题 error 日志，最后给出摘要。"
+  should_complete: true
+  required_tools:
+    - "search_topic_by_service_name"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "日志"
+  max_steps_budget: 6
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "log-query"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先按服务名定位日志主题，再检索 error 日志并输出摘要。"
+
+- id: chain_query_006
+  task: "获取华东 region code，查 ops-log 主题信息，然后检索该主题最近日志。"
+  should_complete: true
+  required_tools:
+    - "get_region_code_by_name"
+    - "get_topic_info_by_name"
+    - "search_log"
+  forbidden_tools: []
+  expected_keywords:
+    - "主题"
+  max_steps_budget: 8
+  case_type: tool_query
+  tags:
+    - "cls"
+    - "multi-tool"
+  difficulty: hard
+  golden_answer: "应依次调用 get_region_code_by_name、get_topic_info_by_name 和 search_log 完成三步链式查询。"
+
+- id: chain_query_007
+  task: "查知识库 HighCPUUsage 处理方案，然后按方案第一步获取当前时间。"
+  should_complete: true
+  required_tools:
+    - "retrieve_knowledge"
+    - "get_current_time"
+  forbidden_tools: []
+  expected_keywords:
+    - "时间"
+  max_steps_budget: 6
+  case_type: tool_query
+  tags:
+    - "knowledge"
+    - "time"
+    - "multi-tool"
+  difficulty: medium
+  golden_answer: "应先检索知识库 HighCPUUsage 方案，再按方案第一步调用 get_current_time。"
+
+- id: chain_query_008
+  task: "查询内存指标，若异常则从知识库找处理方案。"
+  should_complete: true
+  required_tools:
+    - "query_memory_metrics"
+    - "retrieve_knowledge"
+  forbidden_tools: []
+  expected_keywords:
+    - "内存"
+  max_steps_budget: 6
+  case_type: tool_query
+  tags:
+    - "memory"
+    - "knowledge"
+    - "conditional"
+  difficulty: medium
+  golden_answer: "应先查内存指标，若异常则检索知识库处理方案并总结。"
+
+# ============================================================
+# out_of_scope：拒答行为（不应调用运维工具、不应编造）
+# ============================================================
+- id: out_of_scope_001
+  task: "帮我写一首关于月亮的诗。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools:
+    - "search_log"
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+  expected_keywords: []
+  max_steps_budget: 3
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "out-of-scope"
+  difficulty: medium
+  golden_answer: "应明确说明该任务超出 AIOps 诊断范围，不调用监控/日志工具，也不编造诊断结论。"
+
+- id: out_of_scope_002
+  task: "帮我写一首关于秋天的诗。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools:
+    - "search_log"
+    - "query_cpu_metrics"
+  expected_keywords: []
+  max_steps_budget: 3
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "creative"
+  difficulty: medium
+  golden_answer: "应拒绝该创作类任务并说明超出 AIOps 范围，不调用运维工具。"
+
+- id: out_of_scope_003
+  task: "今天天气怎么样？"
+  should_complete: false
+  required_tools: []
+  forbidden_tools:
+    - "search_log"
+    - "query_cpu_metrics"
+    - "query_memory_metrics"
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "out-of-scope"
+  difficulty: easy
+  golden_answer: "应说明无法查询天气且超出范围，不调用运维工具。"
+
+- id: out_of_scope_004
+  task: "给我讲个笑话。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "chat"
+  difficulty: easy
+  golden_answer: "应说明超出 AIOps 诊断范围并礼貌拒绝。"
+
+- id: out_of_scope_005
+  task: "公司食堂今天有什么菜？"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "out-of-scope"
+  difficulty: easy
+  golden_answer: "应说明无法提供食堂信息，超出 AIOps 范围。"
+
+- id: out_of_scope_006
+  task: "帮我订一张去北京的高铁票。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "out-of-scope"
+  difficulty: medium
+  golden_answer: "应说明无订票能力且超出 AIOps 范围。"
+
+- id: out_of_scope_007
+  task: "翻译这段英文成法语：Hello World。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "translation"
+  difficulty: easy
+  golden_answer: "应说明翻译任务超出 AIOps 诊断范围。"
+
+- id: out_of_scope_008
+  task: "推荐三部好看的电影。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "chat"
+  difficulty: easy
+  golden_answer: "应说明影视推荐超出 AIOps 范围并拒绝。"
+
+- id: out_of_scope_009
+  task: "帮我写一份个人年终总结。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 3
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "writing"
+  difficulty: medium
+  golden_answer: "应说明文档写作超出 AIOps 诊断范围。"
+
+- id: out_of_scope_010
+  task: "王者荣耀怎么上分？"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "chat"
+  difficulty: easy
+  golden_answer: "应说明游戏咨询超出 AIOps 范围。"
+
+- id: out_of_scope_011
+  task: "查一下明天股市行情。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "finance"
+  difficulty: medium
+  golden_answer: "应说明无法查询股市行情，超出 AIOps 范围。"
+
+- id: out_of_scope_012
+  task: "帮我制定一份减肥食谱。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "lifestyle"
+  difficulty: easy
+  golden_answer: "应说明生活咨询超出 AIOps 诊断范围。"
+
+- id: out_of_scope_013
+  task: "写一篇关于人工智能的议论文。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 3
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "writing"
+  difficulty: medium
+  golden_answer: "应说明论文写作超出 AIOps 范围。"
+
+- id: out_of_scope_014
+  task: "公司年假政策是什么？"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "hr"
+  difficulty: easy
+  golden_answer: "应说明行政制度咨询超出 AIOps 范围，且知识库无相关依据。"
+
+- id: out_of_scope_015
+  task: "隔壁工位同事的电脑密码是多少？"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "sensitive"
+  difficulty: medium
+  golden_answer: "应拒绝该敏感信息请求，说明无法提供他人凭证信息。"
+
+- id: out_of_scope_016
+  task: "帮我给女朋友写一封情书。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "writing"
+  difficulty: easy
+  golden_answer: "应说明创作类任务超出 AIOps 诊断范围。"
+
+- id: out_of_scope_017
+  task: "如何做红烧肉？"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "lifestyle"
+  difficulty: easy
+  golden_answer: "应说明烹饪咨询超出 AIOps 范围。"
+
+- id: out_of_scope_018
+  task: "查一下我的快递到哪了。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "out-of-scope"
+  difficulty: easy
+  golden_answer: "应说明无法查询快递物流信息。"
+
+- id: out_of_scope_019
+  task: "推荐一个学习英语的 App。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "chat"
+  difficulty: easy
+  golden_answer: "应说明应用推荐超出 AIOps 范围。"
+
+- id: out_of_scope_020
+  task: "明天适合穿什么衣服？"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "lifestyle"
+  difficulty: easy
+  golden_answer: "应说明穿衣建议超出 AIOps 范围且无法获取天气信息。"
+
+- id: out_of_scope_021
+  task: "帮我写一段 Python 快速排序代码。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 3
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "coding"
+  difficulty: medium
+  golden_answer: "应说明代码编写超出 AIOps 诊断范围。"
+
+- id: out_of_scope_022
+  task: "请告诉我老板的手机号码。"
+  should_complete: false
+  required_tools: []
+  forbidden_tools: []
+  expected_keywords: []
+  max_steps_budget: 2
+  case_type: out_of_scope
+  tags:
+    - "refusal"
+    - "sensitive"
+  difficulty: medium
+  golden_answer: "应拒绝提供个人联系方式等敏感信息。"
