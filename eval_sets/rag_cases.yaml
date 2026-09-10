@@ -1,0 +1,1647 @@
+# RAG eval set（100 cases，覆盖 5 个 runbook 全链路）。
+# 该文件只描述离线评估数据，不被线上 FastAPI 默认导入；这样可以为检索/生成指标
+# 提供稳定 baseline，同时避免在线路径耦合评估集。
+# expected_doc_ids 使用 ISSUE-018 的稳定 doc_id 规则生成，防止评估集和索引主键漂移。
+# 构成：5 个告警 runbook 各 17 条（easy 直查 / medium 复述 / hard 间接问法），
+# 3 条跨文档 case，12 条拒答 case（知识库无依据，验证不编造）。
+# ============================================================
+# CPU 使用率过高（doc_6670fc2e2e2afacf6b534582b60c22d5）
+# ============================================================
+- id: cpu_high_usage_001
+  question: "CPU 使用率持续超过 80% 时，应该先查哪些日志和指标？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "HighCPUUsage"
+    - "system-metrics"
+    - "cpu_usage"
+    - "进程"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "runbook"
+    - "log-query"
+  difficulty: easy
+  golden_answer: "应先确认 HighCPUUsage 告警时间，查询 system-metrics 中 cpu_usage 超过阈值的记录，再结合进程信息和应用日志定位高 CPU 来源。"
+
+- id: cpu_high_usage_002
+  question: "如果多个进程 CPU 使用率一起升高，并且请求量明显增加，应如何处理？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "流量突增"
+    - "自动扩容"
+    - "限流"
+    - "响应时间"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "traffic-spike"
+    - "mitigation"
+  difficulty: medium
+  golden_answer: "这种特征更像流量突增，应检查活动或突发流量，启动自动扩容；若是恶意流量，应启用限流并持续监控扩容后的 CPU 使用率。"
+
+- id: cpu_high_usage_003
+  question: "固定时间点 CPU 周期性升高，怀疑是任务重叠执行，处理思路是什么？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "定时任务重叠执行"
+    - "调整任务执行时间"
+    - "互斥锁"
+    - "周期性"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "cpu"
+    - "scheduled-task"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "应检查定时任务配置和日志，确认是否有任务重叠执行；处理上可调整任务执行时间、优化任务逻辑，并增加任务执行互斥锁。"
+
+- id: cpu_trigger_condition_002
+  question: "HighCPUUsage 告警的触发条件是什么？持续多久、超过多少会触发？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "80%"
+    - "5分钟"
+    - "严重"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "alert-rule"
+  difficulty: easy
+  golden_answer: "HighCPUUsage 为严重级别告警，触发条件是 CPU 使用率持续 5 分钟超过 80%。"
+
+- id: cpu_query_region_002
+  question: "排查 CPU 告警时查询系统日志应指定哪个地域和日志主题？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "ap-guangzhou"
+    - "system-metrics"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "log-query"
+    - "region"
+  difficulty: easy
+  golden_answer: "应指定地域 ap-guangzhou（广州），日志主题为 system-metrics，时间范围最近 30 分钟。"
+
+- id: cpu_query_condition_002
+  question: "查询系统指标日志时用什么查询条件能定位 CPU 告警记录？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "cpu_usage"
+    - "80"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "log-query"
+    - "query-syntax"
+  difficulty: easy
+  golden_answer: "可使用 cpu_usage > 80（或 cpu_usage:>80）配合 service_name:* 作为查询条件，时间范围取最近 30 分钟。"
+
+- id: cpu_deadloop_feature_002
+  question: "单个进程 CPU 占用接近 100%，应用日志中有大量重复的错误堆栈，最可能是什么原因？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "死循环"
+    - "递归"
+    - "重启"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "deadloop"
+    - "root-cause"
+  difficulty: medium
+  golden_answer: "最可能是代码死循环或无限递归；特征还包括内存使用同步增长。应立即重启受影响实例，回滚到稳定版本，并通知开发修复。"
+
+- id: cpu_deadloop_handle_002
+  question: "确认是代码 bug 导致死循环 CPU 飙高后，应执行哪些处理动作？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "重启"
+    - "回滚"
+    - "修复"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "deadloop"
+    - "mitigation"
+  difficulty: medium
+  golden_answer: "应立即重启受影响的服务实例，查看应用日志定位代码问题，回滚到上一个稳定版本，并通知开发团队修复代码 bug。"
+
+- id: cpu_traffic_feature_002
+  question: "流量突增导致的 CPU 升高在日志上有什么特征？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "均匀升高"
+    - "请求量"
+    - "响应时间"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "traffic-spike"
+    - "feature"
+  difficulty: medium
+  golden_answer: "特征是多个进程 CPU 使用率均匀升高、请求量明显增加、响应时间变长但无明显错误。"
+
+- id: cpu_slowquery_002
+  question: "应用 CPU 高但业务逻辑简单，数据库连接池占用也高，可能是什么原因？怎么处理？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "慢查询"
+    - "索引"
+    - "缓存层"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "database"
+    - "root-cause"
+  difficulty: medium
+  golden_answer: "可能是数据库查询慢：特征为应用 CPU 高但业务逻辑简单、日志有慢查询记录、连接池占用高。应查询慢 SQL 日志、优化 SQL 或添加索引、检查全表扫描，并考虑增加缓存层。"
+
+- id: cpu_emergency_002
+  question: "CPU 严重告警时 5 分钟内可以执行哪些立即操作？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "扩容"
+    - "限流"
+    - "重启"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "emergency"
+  difficulty: easy
+  golden_answer: "5 分钟内可执行：流量问题立即扩容增加实例；怀疑恶意流量启用限流规则；单个实例问题则重启该实例。"
+
+- id: cpu_longterm_002
+  question: "CPU 告警处理完成之后，长期应该做哪些优化？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "代码性能"
+    - "扩缩容"
+    - "压力测试"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "long-term"
+  difficulty: medium
+  golden_answer: "长期优化包括：代码性能优化、增加监控告警阈值、完善自动扩缩容策略、定期进行压力测试。"
+
+- id: cpu_verify_002
+  question: "CPU 告警处理后怎样确认已经恢复？使用率降到多少算正常？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "60%"
+    - "30分钟"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "verification"
+  difficulty: medium
+  golden_answer: "确认 CPU 使用率降到 60% 以下、应用响应时间恢复正常、无新错误日志，并持续观察 30 分钟确保不复现。"
+
+- id: cpu_related_alert_002
+  question: "CPU 使用率过高告警通常伴随哪些相关告警？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "HighMemoryUsage"
+    - "HighLoadAverage"
+    - "SlowResponse"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "related-alerts"
+  difficulty: easy
+  golden_answer: "相关告警包括 HighMemoryUsage（内存使用率过高）、HighLoadAverage（系统负载过高）和 SlowResponse（响应时间过长）。"
+
+- id: cpu_applog_condition_002
+  question: "排查 CPU 告警时，应用日志应该用什么主题和查询条件？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "application-logs"
+    - "ERROR"
+    - "WARN"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "log-query"
+    - "query-syntax"
+  difficulty: medium
+  golden_answer: "应用日志使用 application-logs 主题，查询条件为 level:ERROR OR level:WARN，时间范围与告警时间一致。"
+
+- id: cpu_process_analysis_002
+  question: "分析 CPU 消耗进程时，日志里需要重点关注哪些信息？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "进程"
+    - "PID"
+    - "CPU占用"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "process-analysis"
+  difficulty: medium
+  golden_answer: "应重点关注进程名称和 PID、CPU 占用百分比、进程启动时间、进程所属服务。"
+
+- id: cpu_contact_002
+  question: "CPU 告警处理需要联系哪些团队？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "运维团队"
+    - "开发团队"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "cpu"
+    - "contact"
+  difficulty: easy
+  golden_answer: "可联系运维团队 ops-team@company.com 和开发团队 dev-team@company.com，紧急情况拨打紧急电话。"
+
+# ============================================================
+# 磁盘使用率过高（doc_d9b4d028c9110e9a34f15bb7509f7e39）
+# ============================================================
+- id: disk_high_usage_001
+  question: "磁盘使用率超过 90% 且日志无法写入时，5 分钟内应怎么释放空间？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "HighDiskUsage"
+    - "日志文件"
+    - "find /var/log"
+    - "扩容磁盘"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "emergency"
+    - "cleanup"
+  difficulty: easy
+  golden_answer: "应快速查找并清理大日志或临时文件，必要时压缩或删除旧日志；如果无法快速释放空间，应立即扩容磁盘。"
+
+- id: disk_high_usage_002
+  question: "文件上传临时目录满了，应该如何排查和预防临时文件堆积？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "/tmp"
+    - "临时文件"
+    - "mtime +7"
+    - "定期清理"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "temp-files"
+    - "prevention"
+  difficulty: medium
+  golden_answer: "应检查 /tmp 或应用临时目录的大文件和历史文件，删除过期临时文件；预防上应设置定时清理、处理完成后立即删除，并限制临时文件大小。"
+
+- id: disk_high_usage_003
+  question: "Docker 镜像、停止容器和容器日志占满磁盘时应执行哪些治理动作？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "docker image prune"
+    - "docker container prune"
+    - "docker system prune"
+    - "容器日志"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "disk"
+    - "docker"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "应清理未使用镜像、停止容器和未使用卷，可使用 docker image prune、docker container prune、docker system prune；同时限制容器日志大小并设置日志轮转。"
+
+- id: disk_level_002
+  question: "HighDiskUsage 告警的警告和严重级别分别是按什么阈值划分的？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "80%"
+    - "90%"
+    - "警告"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "alert-rule"
+  difficulty: easy
+  golden_answer: "HighDiskUsage 按使用率超过 80% 为警告、超过 90% 为严重；触发条件为持续 5 分钟超过阈值。"
+
+- id: disk_logrotate_002
+  question: "日志文件过大导致磁盘告警，应如何配置日志轮转？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "logrotate"
+    - "保留天数"
+    - "压缩"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "logrotate"
+    - "prevention"
+  difficulty: medium
+  golden_answer: "应启用 logrotate，设置日志保留天数、配置日志压缩，并限制单个日志文件大小。"
+
+- id: disk_loglevel_002
+  question: "生产环境日志级别应如何设置来控制磁盘占用？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "INFO"
+    - "WARN"
+    - "大对象"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "log-level"
+  difficulty: medium
+  golden_answer: "生产环境应使用 INFO 或 WARN 级别，避免打印大对象，减少不必要的日志输出。"
+
+- id: disk_data_growth_002
+  question: "业务数据量激增导致数据库文件持续增长，磁盘快满了怎么治理？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "归档"
+    - "扩容"
+    - "冷热数据分离"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "data-growth"
+    - "archiving"
+  difficulty: medium
+  golden_answer: "应删除过期数据、归档历史数据、清理测试数据；建立数据归档策略并使用对象存储保存归档数据，实现冷热数据分离；如果是正常业务增长则扩容磁盘。"
+
+- id: disk_backup_clean_002
+  question: "备份文件占满磁盘空间时应如何清理和优化备份策略？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "备份"
+    - "mtime +30"
+    - "增量备份"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "backup"
+  difficulty: medium
+  golden_answer: "使用 find /backup -name \"*.bak\" -mtime +30 删除 30 天前的备份；优化策略为只保留最近 N 天备份、压缩备份文件、备份到对象存储并实现增量备份。"
+
+- id: disk_cache_clean_002
+  question: "应用缓存文件过多占用磁盘，应如何清理和优化？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "缓存"
+    - "过期时间"
+    - "LRU"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "cache"
+  difficulty: medium
+  golden_answer: "可清理应用缓存目录；优化上应设置缓存过期时间、限制缓存大小、实现 LRU 淘汰策略，或使用 Redis 等外部缓存。"
+
+- id: disk_docker_002
+  question: "Docker 占用大量磁盘空间，应执行哪些清理命令？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "docker image prune"
+    - "docker container prune"
+    - "docker volume prune"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "docker"
+    - "cleanup"
+  difficulty: medium
+  golden_answer: "可执行 docker image prune -a 清理未使用镜像、docker container prune 清理停止容器、docker volume prune 清理未使用卷，或使用 docker system prune -a --volumes 一次性清理。"
+
+- id: disk_df_du_002
+  question: "查看磁盘使用率和目录大小的常用命令有哪些？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "df"
+    - "du"
+    - "find"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "commands"
+  difficulty: easy
+  golden_answer: "df -h 查看磁盘使用率，du -sh 查看目录大小，find / -type f -size +1G 查找大文件，df -i 查看 inode 使用情况。"
+
+- id: disk_inode_002
+  question: "磁盘空间还没满但无法创建新文件，应该检查什么？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "inode"
+    - "df -i"
+    - "InodeFull"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "disk"
+    - "inode"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "可能是 inode 耗尽（InodeFull 告警），应使用 df -i 检查 inode 使用情况，清理大量小文件释放 inode。"
+
+- id: disk_verify_002
+  question: "磁盘告警处理后使用率降到多少算安全？验证时要确认什么？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "70%"
+    - "日志"
+    - "数据库"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "verification"
+  difficulty: medium
+  golden_answer: "应确认磁盘使用率降到 70% 以下、应用运行正常、日志可以正常写入、数据库运行正常，并持续监控磁盘使用情况。"
+
+- id: disk_prevention_002
+  question: "磁盘使用率过高问题的预防措施有哪些？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "60%"
+    - "定期清理"
+    - "容量规划"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "prevention"
+  difficulty: medium
+  golden_answer: "设置 60% 预警、80% 严重告警；每周自动清理临时文件和旧日志；根据增长趋势提前扩容；实施统一日志管理策略并建立数据归档清理机制。"
+
+- id: disk_container_log_002
+  question: "容器日志过大占磁盘，应如何限制？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "日志"
+    - "轮转"
+    - "限制"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "docker"
+    - "container-log"
+  difficulty: medium
+  golden_answer: "应配置日志驱动、限制日志文件大小、设置日志轮转。"
+
+- id: disk_coldhot_002
+  question: "历史数据占用大量空间但业务仍需保留，存储上如何优化？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "对象存储"
+    - "归档"
+    - "冷热数据分离"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "disk"
+    - "archiving"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "应建立数据归档策略，定期归档历史数据，使用对象存储保存归档数据，实现冷热数据分离。"
+
+- id: disk_related_alert_002
+  question: "磁盘使用率过高之外，磁盘相关的告警还有哪些？"
+  expected_doc_ids:
+    - "doc_d9b4d028c9110e9a34f15bb7509f7e39"
+  expected_keywords:
+    - "InodeFull"
+    - "DiskIOHigh"
+    - "DiskReadOnly"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "disk"
+    - "related-alerts"
+  difficulty: easy
+  golden_answer: "相关告警包括 InodeFull（inode 耗尽）、DiskIOHigh（磁盘 IO 过高）、DiskReadOnly（磁盘只读）和 FileSystemError（文件系统错误）。"
+
+# ============================================================
+# 内存使用率过高（doc_949c200450258e842fe850a1ecef99a4）
+# ============================================================
+- id: memory_high_usage_001
+  question: "内存使用率持续超过 85% 时，应查询哪些日志来判断是否 OOM 或 GC 异常？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "HighMemoryUsage"
+    - "memory_usage"
+    - "OOM"
+    - "GC overhead"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "log-query"
+    - "oom"
+  difficulty: easy
+  golden_answer: "应查询 system-metrics 中 memory_usage 超过 85% 或 OOM 事件，并查询 application-logs 中 OutOfMemoryError 或 GC overhead 相关记录。"
+
+- id: memory_high_usage_002
+  question: "Full GC 后内存仍无法释放，怀疑内存泄漏，应如何处理？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "内存泄漏"
+    - "堆转储"
+    - "MAT"
+    - "重启应用"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "leak"
+    - "heap-dump"
+  difficulty: medium
+  golden_answer: "应先重启应用释放内存，并在重启前获取堆转储；随后使用 MAT 分析堆转储，定位持有大量对象引用的代码并修复发布。"
+
+- id: memory_high_usage_003
+  question: "大文件处理导致内存突增，怎样避免一次性加载占满内存？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "流式处理"
+    - "限制文件大小"
+    - "分批处理"
+    - "异步处理"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "memory"
+    - "large-file"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "应将大文件或大数据处理改为流式处理，避免一次性加载；同时限制文件大小、分批处理，并把大数据任务放到后台异步队列。"
+
+- id: memory_trigger_condition_002
+  question: "HighMemoryUsage 告警的触发条件是什么？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "85%"
+    - "5分钟"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "alert-rule"
+  difficulty: easy
+  golden_answer: "HighMemoryUsage 为严重级别告警，触发条件是内存使用率持续 5 分钟超过 85%。"
+
+- id: memory_query_condition_002
+  question: "查询系统监控日志定位内存告警时，应该用什么查询条件？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "memory_usage"
+    - "85"
+    - "OOM"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "log-query"
+    - "query-syntax"
+  difficulty: easy
+  golden_answer: "应查询 system-metrics 主题，条件为 memory_usage:>85 OR event:OOM（或 oom_kill:true），时间范围最近 30 分钟。"
+
+- id: memory_traffic_object_002
+  question: "流量突增导致内存对象激增，内存告警应如何处理？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "扩容"
+    - "限流"
+    - "GC"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "traffic-spike"
+  difficulty: medium
+  golden_answer: "特征是内存使用率突然升高且与流量增长同步、GC 能回收大部分内存。应立即扩容增加实例、启用限流保护系统、优化缓存策略；若为合理业务增长可考虑增加内存配置。"
+
+- id: memory_cache_config_002
+  question: "缓存配置不当导致内存占用过高，应如何优化？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "缓存"
+    - "TTL"
+    - "LRU"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "cache"
+  difficulty: medium
+  golden_answer: "应减少缓存容量上限、设置合理的 TTL 过期策略、启用 LRU 淘汰确保缓存自动淘汰旧数据，并持续监控缓存命中率和内存占用。"
+
+- id: memory_jvm_params_002
+  question: "JVM 堆内存配置过小导致内存告警，应调整哪些参数？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "-Xmx"
+    - "GC"
+    - "Metaspace"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "jvm"
+  difficulty: medium
+  golden_answer: "应增加 -Xmx 和 -Xms 堆内存参数，根据应用特点选择合适的 GC 算法，优化 -XX:NewRatio 代际比例；若为元空间溢出则调整 -XX:MetaspaceSize。"
+
+- id: memory_metaspace_002
+  question: "应用启动报 Metaspace 溢出，怎么处理？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "元空间"
+    - "Metaspace"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "memory"
+    - "jvm"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "元空间（Metaspace）溢出属于 JVM 参数配置不合理，应调整 -XX:MetaspaceSize 参数增加元空间大小。"
+
+- id: memory_jmap_002
+  question: "如何查看 JVM 堆内存使用情况并生成堆转储文件？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "jmap"
+    - "堆转储"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "jvm"
+    - "commands"
+  difficulty: easy
+  golden_answer: "使用 jmap -heap <pid> 查看 JVM 堆内存使用情况；使用 jmap -dump:format=b,file=heap.hprof <pid> 生成堆转储文件。"
+
+- id: memory_jstat_002
+  question: "怎样查看 GC 频率和耗时？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "jstat"
+    - "GC"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "jvm"
+    - "commands"
+  difficulty: easy
+  golden_answer: "使用 jstat -gc <pid> 1000 查看_gc 日志，可观察 GC 频率和耗时。"
+
+- id: memory_emergency_002
+  question: "内存告警时 5 分钟内的紧急措施有哪些？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "重启"
+    - "扩容"
+    - "限流"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "emergency"
+  difficulty: easy
+  golden_answer: "应重启高内存实例快速释放内存恢复服务；扩容增加实例数量分散内存压力；如果是流量问题则启用限流保护。"
+
+- id: memory_verify_002
+  question: "内存告警处理后怎样确认恢复？降到多少算正常？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "70%"
+    - "GC"
+    - "30分钟"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "verification"
+  difficulty: medium
+  golden_answer: "确认内存使用率降到 70% 以下，观察 GC 频率和耗时是否正常，检查应用日志无 OOM 错误，持续监控 30 分钟确保稳定。"
+
+- id: memory_prevention_002
+  question: "内存使用率过高问题的预防措施有哪些？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "70%"
+    - "代码审查"
+    - "压力测试"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "prevention"
+  difficulty: medium
+  golden_answer: "设置 70% 预警、85% 严重的告警阈值；每周分析内存使用趋势；代码审查关注大对象创建和集合使用；上线前进行充分的内存压力测试。"
+
+- id: memory_swap_002
+  question: "系统 swap 频繁、性能急剧下降，和内存有什么关系？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "swap"
+    - "内存"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "memory"
+    - "swap"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "内存使用率持续超过 85% 会导致系统 swap 频繁、性能急剧下降，还可能引发频繁 GC、OOM 错误甚至应用崩溃重启，应按 HighMemoryUsage 流程排查处理。"
+
+- id: memory_related_alert_002
+  question: "内存使用率过高通常伴随哪些相关告警？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "FrequentGC"
+    - "OOMError"
+    - "HighCPUUsage"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "related-alerts"
+  difficulty: easy
+  golden_answer: "相关告警包括 HighCPUUsage（可能伴随频繁 GC）、FrequentGC（GC 频率过高）、OOMError（内存溢出错误）和 SlowResponse（响应时间过长）。"
+
+- id: memory_gc_analysis_002
+  question: "排查内存告警时，应从日志中提取哪些内存使用信息？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "JVM堆内存"
+    - "GC频率"
+    - "内存泄漏"
+    - "大对象"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "memory"
+    - "log-analysis"
+  difficulty: medium
+  golden_answer: "应从日志中提取 JVM 堆内存使用情况、GC 频率和耗时、是否有内存泄漏迹象、大对象分配记录。"
+
+# ============================================================
+# 服务不可用（doc_2b588d350d4b6c508ed418bb89e98d27）
+# ============================================================
+- id: service_unavailable_001
+  question: "服务健康检查失败或错误率超过 50% 时，第一时间应怎么止损？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "ServiceUnavailable"
+    - "健康检查"
+    - "止损措施"
+    - "维护页面"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "emergency"
+    - "health-check"
+  difficulty: easy
+  golden_answer: "应先确认故障并启动应急响应；如果部分实例故障则摘除故障实例，如果全部故障则启用备用服务或维护页面。"
+
+- id: service_unavailable_002
+  question: "数据库连接失败导致服务不可用，日志里出现 Connection refused 或 Too many connections，应该怎么恢复？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "数据库连接失败"
+    - "Connection refused"
+    - "Too many connections"
+    - "连接池"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "database"
+    - "dependency"
+  difficulty: medium
+  golden_answer: "应检查数据库服务状态、连接数和错误日志，必要时恢复数据库连接、释放僵死连接或增加最大连接数；应用侧可重启以重建连接池并调整连接池配置。"
+
+- id: service_unavailable_003
+  question: "Redis 或 MQ 依赖故障引发级联故障时，服务侧应如何降级和隔离？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "依赖服务故障"
+    - "熔断机制"
+    - "缓存数据"
+    - "限制重试次数"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "service-unavailable"
+    - "dependency"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "应快速启用熔断和降级，跳过非关键依赖或使用缓存数据；同时恢复依赖服务，并通过限制重试次数和超时控制隔离故障。"
+
+- id: service_trigger_condition_002
+  question: "ServiceUnavailable 告警的触发条件是什么？级别如何？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "健康检查"
+    - "50%"
+    - "紧急"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "alert-rule"
+  difficulty: easy
+  golden_answer: "ServiceUnavailable 为紧急级别告警，触发条件是服务健康检查失败或错误率超过 50%。"
+
+- id: service_crash_rollback_002
+  question: "新版本发布后所有实例都无法响应，应如何恢复？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "回滚"
+    - "稳定版本"
+    - "备用服务"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "crash"
+    - "rollback"
+  difficulty: medium
+  golden_answer: "属于应用崩溃或无法启动，应立即回滚到上一个稳定版本，使用蓝绿部署或金丝雀发布策略；紧急时可启用备用服务、显示维护页面并通知用户。"
+
+- id: service_config_error_002
+  question: "配置变更后服务不可用，日志有配置加载错误，怎么处理？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "回滚配置"
+    - "配置中心"
+    - "审批"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "config"
+  difficulty: medium
+  golden_answer: "应回滚到上一个正确配置，检查配置文件语法并验证环境变量；长期应使用配置中心统一管理，配置变更需要审批并保留历史版本。"
+
+- id: service_resource_exhaust_002
+  question: "文件描述符耗尽或端口被占用导致服务不可用，应怎么处理？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "资源耗尽"
+    - "ulimit"
+    - "清理"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "resource"
+  difficulty: medium
+  golden_answer: "属于资源耗尽，应清理磁盘空间、释放文件描述符、杀死占用端口的进程；扩容资源如调整 ulimit 系统限制、增加内存配置；优化上实现日志轮转、及时关闭文件句柄。"
+
+- id: service_network_dns_002
+  question: "DNS 解析失败或负载均衡器异常导致用户无法访问服务，应如何处理？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "网络故障"
+    - "DNS"
+    - "备用"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "network"
+  difficulty: medium
+  golden_answer: "属于网络故障，应测试网络连通性（ping/telnet）、检查防火墙和安全组、验证 DNS 解析；修复上重启网络服务、修正路由、更新负载均衡器配置；必要时切换备用地域、备用域名或启用 CDN。"
+
+- id: service_one_minute_002
+  question: "服务不可用故障发生后 1 分钟内应完成哪些动作？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "确认故障"
+    - "应急"
+    - "止损"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "emergency-flow"
+  difficulty: easy
+  golden_answer: "1 分钟内应通过监控和日志确认服务确实不可用，通知相关人员启动应急响应流程，并执行止损：部分实例故障则摘除故障实例，全部故障则启用备用服务或维护页面。"
+
+- id: service_fifteen_min_002
+  question: "服务不可用故障 15 分钟内要达成什么目标？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "恢复服务"
+    - "验证"
+    - "监控"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "emergency-flow"
+  difficulty: medium
+  golden_answer: "15 分钟内应通过回滚、修复或降级恢复服务，验证核心功能可用，并持续监控服务状态。"
+
+- id: service_escalation_002
+  question: "服务不可用故障的升级机制是怎样的？多长时间要升级到什么级别？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "技术总监"
+    - "CTO"
+    - "1小时"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "escalation"
+  difficulty: medium
+  golden_answer: "15 分钟未恢复升级到技术总监，30 分钟未恢复升级到 CTO，1 小时未恢复启动最高级别应急响应。"
+
+- id: service_verify_002
+  question: "服务恢复后的验证标准是什么？错误率要降到多少？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "健康检查"
+    - "1%"
+    - "30分钟"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "verification"
+  difficulty: medium
+  golden_answer: "验证所有实例健康检查通过、核心业务功能测试正常、响应时间和吞吐量正常、错误率降到 1% 以下，并持续监控 30 分钟确保稳定。"
+
+- id: service_release_strategy_002
+  question: "为避免服务不可用，发布策略上应采取哪些措施？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "灰度发布"
+    - "蓝绿部署"
+    - "金丝雀"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "release-strategy"
+    - "prevention"
+  difficulty: medium
+  golden_answer: "应采用灰度发布、蓝绿部署、金丝雀发布，并建立快速回滚机制；配套多实例部署、多地域容灾和自动故障转移。"
+
+- id: service_review_002
+  question: "服务故障恢复后为什么必须复盘？复盘要记录哪些内容？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "复盘"
+    - "根因分析"
+    - "改进措施"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "review"
+  difficulty: easy
+  golden_answer: "复盘需记录故障发生、发现、处理、恢复的完整时间线，深入分析根本原因，评估影响范围和损失，制定改进措施，并更新运维文档和应急预案。"
+
+- id: service_contact_002
+  question: "服务不可用紧急情况下应联系哪些值班？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "运维值班"
+    - "开发值班"
+    - "DBA"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "contact"
+  difficulty: easy
+  golden_answer: "可联系运维值班、开发值班、DBA 值班（均为 24 小时）、网络团队和安全团队对应的紧急联系电话。"
+
+- id: service_system_events_query_002
+  question: "排查服务不可用时应查询系统事件日志的什么条件？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "system-events"
+    - "restart"
+    - "crash"
+    - "oom_kill"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应查询 system-events 主题，条件为 event:restart OR event:crash OR event:oom_kill。"
+
+- id: service_status_log_query_002
+  question: "服务不可用排查的第一步日志查询用什么主题和条件？"
+  expected_doc_ids:
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "application-logs"
+    - "15分钟"
+    - "500"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "service-unavailable"
+    - "log-query"
+  difficulty: medium
+  golden_answer: "应查询 application-logs 主题，时间范围最近 15 分钟，条件为 level:ERROR OR level:FATAL OR status:500。"
+
+# ============================================================
+# 服务响应时间过长（doc_4c0c7044577a6b4be8a9e0ad913d3d38）
+# ============================================================
+- id: slow_response_001
+  question: "P99 响应时间持续超过 3 秒时，应该先查哪些日志主题？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "SlowResponse"
+    - "response_time"
+    - "database-slow-query"
+    - "system-metrics"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "log-query"
+    - "performance"
+  difficulty: easy
+  golden_answer: "应查询 application-logs 中 response_time 超过 3000 或 slow_query 的记录，再查询 database-slow-query 和 system-metrics 来定位数据库或资源瓶颈。"
+
+- id: slow_response_002
+  question: "数据库慢查询导致接口响应慢，应从哪些方面临时优化和长期治理？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "数据库慢查询"
+    - "EXPLAIN"
+    - "索引"
+    - "连接池"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "database"
+    - "sql"
+  difficulty: medium
+  golden_answer: "应找出最慢 SQL，检查索引和执行计划，必要时临时添加索引或优化 SQL；短期可增加连接池或启用查询缓存，长期应分析慢查询并优化表结构和索引策略。"
+
+- id: slow_response_003
+  question: "缓存命中率突然下降导致接口变慢，应如何处理缓存穿透或同时失效？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "缓存预热"
+    - "缓存穿透"
+    - "布隆过滤器"
+    - "过期时间"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "slow-response"
+    - "cache"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "应进行缓存预热，避免热点缓存同时失效；对空值也进行缓存，可使用布隆过滤器防止缓存穿透，并优化缓存过期时间和更新策略。"
+
+- id: slow_trigger_condition_002
+  question: "SlowResponse 告警的触发条件是什么？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "P99"
+    - "3秒"
+    - "5分钟"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "alert-rule"
+  difficulty: easy
+  golden_answer: "SlowResponse 为警告级别告警，触发条件是 P99 响应时间持续 5 分钟超过 3 秒。"
+
+- id: slow_external_api_002
+  question: "外部 API 调用超时导致接口变慢，应如何处理？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "超时"
+    - "熔断"
+    - "并行调用"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "external-api"
+  difficulty: medium
+  golden_answer: "应设置合理的连接超时和读取超时；实施熔断降级，返回默认值或缓存数据，异步处理非关键调用；优化调用方式如并行调用多个 API、使用批量接口、增加本地缓存。"
+
+- id: slow_code_perf_002
+  question: "代码性能问题导致接口慢，应如何定位和优化？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "APM"
+    - "火焰图"
+    - "异步"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "code-performance"
+  difficulty: medium
+  golden_answer: "使用 APM 工具定位慢方法，查看火焰图找出热点，分析代码执行路径；优化循环递归、减少对象创建、使用高效数据结构；非关键逻辑异步执行并用消息队列解耦。"
+
+- id: slow_cache_preheat_002
+  question: "服务重启后接口集体变慢，如何通过缓存手段缓解？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "缓存预热"
+    - "定时刷新"
+    - "同时失效"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "cache"
+  difficulty: medium
+  golden_answer: "应进行缓存预热：重启后立即预热热点数据、定时刷新缓存、避免缓存同时失效。"
+
+- id: slow_cache_penetration_002
+  question: "如何防止缓存穿透打垮数据库导致响应变慢？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "空值"
+    - "布隆过滤器"
+    - "参数校验"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "cache"
+  difficulty: medium
+  golden_answer: "应对空值也进行缓存，使用布隆过滤器拦截不存在的 key，并通过参数校验防止恶意查询。"
+
+- id: slow_resource_scale_002
+  question: "系统资源不足导致响应慢，扩容和负载均衡上有哪些措施？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "水平扩展"
+    - "垂直扩展"
+    - "负载均衡"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "resource"
+  difficulty: medium
+  golden_answer: "可增加实例数量（水平扩展）或升级实例规格（垂直扩展）；检查负载均衡配置确保流量均匀分布、移除异常实例；必要时启用限流降级优先保证核心业务。"
+
+- id: slow_network_cdn_002
+  question: "跨地域网络延迟高导致接口慢，网络层如何优化？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "CDN"
+    - "HTTP/2"
+    - "就近访问"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "network"
+  difficulty: medium
+  golden_answer: "可使用 CDN 加速、优化网络路由、启用 HTTP/2 或 QUIC；部署多地域实例、智能 DNS 解析实现就近访问；启用 GZIP 压缩减少传输数据量。"
+
+- id: slow_emergency_002
+  question: "响应时间严重超标时 5 分钟内可执行哪些紧急措施？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "扩容"
+    - "限流"
+    - "降级"
+    - "重启"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "emergency"
+  difficulty: easy
+  golden_answer: "资源不足立即扩容增加实例；启用限流保护系统；降级关闭非核心功能；如果是内存泄漏等问题则重启受影响实例。"
+
+- id: slow_verify_002
+  question: "响应时间告警处理后，P99 降到多少算正常？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "1秒"
+    - "错误率"
+    - "30分钟"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "verification"
+  difficulty: medium
+  golden_answer: "确认 P99 响应时间降到 1 秒以下，检查错误率下降，观察用户投诉减少，并持续监控 30 分钟确保稳定。"
+
+- id: slow_metrics_002
+  question: "响应时间监控应该关注哪些指标？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "P99"
+    - "QPS"
+    - "错误率"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "metrics"
+  difficulty: easy
+  golden_answer: "应关注响应时间（P50/P90/P99/P999）、吞吐量（QPS/TPS）、错误率（4xx/5xx 比例）、资源使用（CPU/内存/网络/磁盘 IO）、数据库慢查询数量与连接池使用率、缓存命中率与失效率。"
+
+- id: slow_n_plus_one_002
+  question: "接口响应慢且数据库查询量异常放大，可能是什么代码问题？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "N+1"
+    - "索引"
+    - "批量"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "slow-response"
+    - "database"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "可能是 N+1 查询问题，应检查数据库查询是否有索引、是否有 N+1 查询，通过网络调用批量化、批量接口减少调用次数来优化。"
+
+- id: slow_gzip_002
+  question: "接口返回数据量大导致传输慢，如何优化传输？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "GZIP"
+    - "压缩"
+    - "传输"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "slow-response"
+    - "network"
+    - "indirect-query"
+  difficulty: hard
+  golden_answer: "可启用 GZIP 压缩、优化数据传输格式、减少传输数据量；配合 CDN 加速和 HTTP/2 提升传输效率。"
+
+- id: slow_readwrite_split_002
+  question: "数据库压力大导致响应慢，架构上可做哪些读写优化？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "读写分离"
+    - "查询缓存"
+    - "分库分表"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "database"
+    - "architecture"
+  difficulty: medium
+  golden_answer: "短期可增加数据库连接池大小、启用查询缓存；长期考虑读写分离，定期分析慢查询日志、优化表结构、建立索引策略，必要时分库分表。"
+
+- id: slow_checklist_002
+  question: "性能优化的检查清单包含哪些项目？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+  expected_keywords:
+    - "索引"
+    - "超时"
+    - "缓存"
+    - "同步等待"
+  should_answer: true
+  case_type: answer
+  tags:
+    - "slow-response"
+    - "checklist"
+  difficulty: easy
+  golden_answer: "检查清单包括：数据库查询是否有索引、是否有 N+1 查询问题、缓存策略是否合理、外部 API 调用是否有超时设置、是否有不必要的同步等待、日志级别是否过于详细、是否有大对象序列化、网络调用是否可以批量化。"
+
+# ============================================================
+# 跨文档 case（多个 runbook 综合）
+# ============================================================
+- id: multi_cpu_memory_002
+  question: "服务器 CPU 和内存使用率同时持续偏高，可能是什么原因？应如何排查？"
+  expected_doc_ids:
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+    - "doc_949c200450258e842fe850a1ecef99a4"
+  expected_keywords:
+    - "GC"
+    - "system-metrics"
+    - "cpu_usage"
+    - "memory_usage"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "multi-doc"
+    - "cpu"
+    - "memory"
+  difficulty: hard
+  golden_answer: "CPU 与内存同时偏高常见于频繁 GC 或死循环导致内存同步增长；应查询 system-metrics 中 cpu_usage 和 memory_usage 记录，结合应用日志中 GC/OutOfMemoryError 记录定位根因，再按对应告警处理方案执行。"
+
+- id: multi_leak_unavailable_002
+  question: "内存泄漏持续恶化最终导致服务完全不可用，完整的处理和恢复流程是什么？"
+  expected_doc_ids:
+    - "doc_949c200450258e842fe850a1ecef99a4"
+    - "doc_2b588d350d4b6c508ed418bb89e98d27"
+  expected_keywords:
+    - "堆转储"
+    - "重启"
+    - "止损"
+    - "恢复"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "multi-doc"
+    - "memory"
+    - "service-unavailable"
+  difficulty: hard
+  golden_answer: "先按服务不可用应急流程止损：确认故障、摘除故障实例或启用备用服务；处理内存泄漏时先在重启前获取堆转储，再重启释放内存，用 MAT 分析定位代码问题；恢复后验证错误率低于 1% 并持续监控 30 分钟。"
+
+- id: multi_slowquery_cpu_002
+  question: "接口变慢、数据库慢查询日志暴增、应用 CPU 也升高，应如何系统性排查？"
+  expected_doc_ids:
+    - "doc_4c0c7044577a6b4be8a9e0ad913d3d38"
+    - "doc_6670fc2e2e2afacf6b534582b60c22d5"
+  expected_keywords:
+    - "慢查询"
+    - "索引"
+    - "连接池"
+    - "缓存"
+  should_answer: true
+  case_type: low_score
+  tags:
+    - "multi-doc"
+    - "slow-response"
+    - "cpu"
+  difficulty: hard
+  golden_answer: "这是数据库慢查询的典型连锁反应：慢 SQL 拖慢响应时间，同时数据库连接池占用高、应用 CPU 升高。应查询 database-slow-query 和 system-metrics 日志，找出最慢 SQL 检查索引和执行计划，临时加索引或优化 SQL，短期增加连接池或启用查询缓存，长期治理表结构与索引策略。"
+
+# ============================================================
+# 拒答 case（知识库无依据，验证不编造）
+# ============================================================
+- id: empty_retrieval_001
+  question: "GPU 温度过高告警 HighGPUTemperature 应该如何排查？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: empty_retrieval
+  tags:
+    - "no-answer"
+    - "empty-retrieval"
+    - "gpu"
+  difficulty: medium
+  golden_answer: "知识库未提供 GPU 温度告警处理方案，应拒绝编造并提示缺少相关知识库依据。"
+
+- id: no_answer_001
+  question: "请列出公司 SLA 赔偿金额、客户名单和本月合同违约细则。"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: no_answer
+  tags:
+    - "no-answer"
+    - "unsupported"
+    - "sensitive"
+  difficulty: hard
+  golden_answer: "知识库没有提供 SLA 赔偿金额、客户名单或合同违约细则，系统应拒绝无依据回答。"
+
+- id: empty_retrieval_002
+  question: "Kubernetes Pod 一直 CrashLoopBackOff 应该怎么处理？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: empty_retrieval
+  tags:
+    - "no-answer"
+    - "empty-retrieval"
+    - "kubernetes"
+  difficulty: medium
+  golden_answer: "知识库未提供 Kubernetes Pod 故障处理方案，应拒绝编造并提示缺少相关知识库依据。"
+
+- id: empty_retrieval_003
+  question: "SSL 证书即将过期，如何配置自动续期？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: empty_retrieval
+  tags:
+    - "no-answer"
+    - "empty-retrieval"
+    - "certificate"
+  difficulty: medium
+  golden_answer: "知识库未提供 SSL 证书管理与自动续期方案，应拒绝编造。"
+
+- id: empty_retrieval_004
+  question: "MySQL 主从复制延迟越来越大怎么处理？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: empty_retrieval
+  tags:
+    - "no-answer"
+    - "empty-retrieval"
+    - "replication"
+  difficulty: medium
+  golden_answer: "知识库未提供数据库主从复制延迟的处理方案，应拒绝编造并提示缺少依据。"
+
+- id: empty_retrieval_005
+  question: "Kafka 消费者积压严重，如何清理积压消息？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: empty_retrieval
+  tags:
+    - "no-answer"
+    - "empty-retrieval"
+    - "kafka"
+  difficulty: medium
+  golden_answer: "知识库未提供 Kafka 消息积压处理方案，应拒绝编造。"
+
+- id: empty_retrieval_006
+  question: "前端页面白屏是什么原因？如何排查？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: empty_retrieval
+  tags:
+    - "no-answer"
+    - "empty-retrieval"
+    - "frontend"
+  difficulty: medium
+  golden_answer: "知识库未提供前端白屏问题的排查方案，应拒绝编造。"
+
+- id: empty_retrieval_007
+  question: "机房空调故障导致温湿度告警，应如何处理？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: empty_retrieval
+  tags:
+    - "no-answer"
+    - "empty-retrieval"
+    - "datacenter"
+  difficulty: medium
+  golden_answer: "知识库未提供机房环境（空调/温湿度）故障处理方案，应拒绝编造。"
+
+- id: no_answer_002
+  question: "公司年假制度和请假审批流程是什么？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: no_answer
+  tags:
+    - "no-answer"
+    - "unsupported"
+    - "hr"
+  difficulty: easy
+  golden_answer: "知识库没有提供公司行政制度信息，系统应拒绝无依据回答。"
+
+- id: no_answer_003
+  question: "Windows 电脑蓝屏怎么修复？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: no_answer
+  tags:
+    - "no-answer"
+    - "unsupported"
+    - "desktop"
+  difficulty: easy
+  golden_answer: "知识库面向服务器运维告警处理，没有 Windows 桌面蓝屏修复方案，应拒绝编造。"
+
+- id: no_answer_004
+  question: "如何执行渗透测试并输出安全评估报告？"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: no_answer
+  tags:
+    - "no-answer"
+    - "unsupported"
+    - "security"
+  difficulty: hard
+  golden_answer: "知识库没有提供渗透测试与安全评估流程，系统应拒绝无依据回答。"
+
+- id: no_answer_005
+  question: "请告诉我张三的工资数额和家庭住址。"
+  expected_doc_ids: []
+  expected_keywords: []
+  should_answer: false
+  case_type: no_answer
+  tags:
+    - "no-answer"
+    - "unsupported"
+    - "sensitive"
+  difficulty: easy
+  golden_answer: "知识库没有员工薪酬或个人信息，属于敏感数据请求，系统应拒绝回答。"

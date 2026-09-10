@@ -1,0 +1,37 @@
+# 记忆存储底座：短期记忆 Redis（LangGraph checkpoint）+ 长期记忆 PostgreSQL（会话历史/摘要）。
+# 启动: docker compose -f docker-compose.memory.yml up -d
+# Milvus 仍由 vector-database.yml 提供（RAG 知识 + 用户记忆画像）。
+services:
+  redis:
+    container_name: memory-redis
+    # Redis 8 开源版内置查询引擎（FT.* 命令），RedisSaver.setup() 依赖它建 checkpoint 索引；
+    # 普通 redis:7-alpine 无 RediSearch 模块，启动期 fail-fast 会直接失败。
+    image: redis:8-alpine
+    # AOF 持久化：Redis 重启后 checkpoint 不丢失，多副本共享会话状态。
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    container_name: memory-postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: aegis
+      POSTGRES_PASSWORD: aegis_secret
+      POSTGRES_DB: aegisops
+    ports:
+      - "5432:5432"
+    volumes:
+      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegis -d aegisops"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
